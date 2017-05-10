@@ -149,16 +149,15 @@ uint64_t* getwtschedule(uint64_t *m) {
       schedule[i] = endianSwap64(m[i]);
       continue;
     }
-    schedule[i] = schedule[i-16] + 
-                  (rotr(schedule[i-15], 1) ^ rotr(schedule[i-15], 8) ^ (schedule[15] >> 7)) +
+    schedule[i] = schedule[i - 16] + 
+                  (rotr(schedule[i-15], 1) ^ rotr(schedule[i-15], 8) ^ (schedule[i-15] >> 7)) +
                   schedule[i-7] +
                   (rotr(schedule[i-2], 19) ^ rotr(schedule[i-2], 61) ^ (schedule[i-2] >> 6));
   }
   return schedule;
 }
 
-int main(int argc, char const *argv[])
-{
+int main(int argc, char const *argv[]) {
   if(argc != 2) {
     printf("usage: sha512 <filepath>\n");
     return -1;
@@ -187,7 +186,7 @@ int main(int argc, char const *argv[])
   fread(inputstring, sizeof(uint64_t), flength, input);
   fclose(input);
 
-  printf("input: %s is %llu bytes\n", (char*) inputstring, (unsigned long long) flength);
+  printf("input: %s is %llx bytes\n", (char*) inputstring, (unsigned long long) flength);
 
   uint64_t* schedule = getwtschedule(inputstring);
 
