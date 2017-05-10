@@ -15,10 +15,18 @@ int main(int argc, char const *argv[]) {
 
   fseek(input, 0, SEEK_END);
   uint16_t flength = ftell(input);
-  uint16_t nflength = flength + (128 - flength%128); //pad the buffer to 1024 bits
+  uint16_t nflength = 0;
+  if(flength + 16 > 128){
+    nflength += 128;
+  }
+
+  nflength += flength + (128 - flength %128); //pad the buffer to 1024 bits
+  uint16_t blockcount = nflength/128;
+
+
   rewind(input);
 
-  printf("%d bytes\n%d paddedbytes\n%d blocks\n", flength, nflength, nflength/128);
+  printf("%d bytes\n%d paddedbytes\n%d blocks\n", flength, nflength, blockcount);
   uint64_t *inputstring = (uint64_t*) malloc(nflength);
   memset(inputstring, 0, nflength);
 
@@ -29,7 +37,7 @@ int main(int argc, char const *argv[]) {
   fclose(input);
 
 
-  for (int block = 0; block < nflength/128; block++) {
+  for (int block = 0; block < blockcount; block++) {
     uint64_t* schedule = getwtschedule(&inputstring[block]);
 
     for (int round = 0; round < 80; round++){
@@ -95,13 +103,16 @@ uint64_t* getwtschedule(uint64_t *m) {
   for (int i = 0; i < 80; i++){
     if (i < 16) {
       schedule[i] = endianSwap64(m[i]);
+       printf("%d %016llx\n", i, (unsigned long long) schedule[i]);
       continue;
     }
     schedule[i] = schedule[i - 16] + 
                   (rotr(schedule[i-15], 1) ^ rotr(schedule[i-15], 8) ^ (schedule[i-15] >> 7)) +
                   schedule[i-7] +
                   (rotr(schedule[i-2], 19) ^ rotr(schedule[i-2], 61) ^ (schedule[i-2] >> 6));
+    printf("%d %016llx\n", i, (unsigned long long) schedule[i]);
   }
+
   return schedule;
 }
 
