@@ -16,7 +16,7 @@ int main(int argc, char const *argv[]) {
   fseek(input, 0, SEEK_END);
   uint16_t flength = ftell(input);
   uint16_t nflength = 0;
-  if(flength + 16 > 128){
+  if((flength%128) + 16 > 128){
     nflength += 128;
   }
 
@@ -35,7 +35,6 @@ int main(int argc, char const *argv[]) {
 
   fread(inputstring, sizeof(uint64_t), flength, input);
   fclose(input);
-
 
   for (int block = 0; block < blockcount; block++) {
     uint64_t* schedule = getwtschedule(&inputstring[block*16]);
