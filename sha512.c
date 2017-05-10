@@ -107,48 +107,55 @@ int main(int argc, char const *argv[]) {
   }
 
   fseek(input, 0, SEEK_END);
-  uint32_t flength = ftell(input);
-  uint32_t nflength = flength + (1024 - flength%1024); //pad the buffer to 1024 bytes
+  uint16_t flength = ftell(input);
+  uint16_t nflength = flength + (128 - flength%128); //pad the buffer to 1024 bits
   rewind(input);
+
+  printf("%d bytes\n",  flength);
+  printf("%d paddedbytes\n", nflength);
+  printf("%d blocks\n", nflength/128);
 
 
   uint64_t *inputstring = (uint64_t*) malloc(nflength);
   memset(inputstring, 0, nflength);
 
   ((char*) inputstring)[flength] = 0x80; //padding begins with a 1
-  uint32_t lengthoffset = (nflength/(sizeof(uint64_t)*8)) - 1;
-  ((uint64_t*) inputstring)[lengthoffset] = endianSwap64(flength*8); //set the length of the input
+  ((uint64_t*) inputstring)[15] = endianSwap64(flength*8); //set the length of the input
 
   fread(inputstring, sizeof(uint64_t), flength, input);
   fclose(input);
 
   printf("input: %s is %llx bytes\n", (char*) inputstring, (unsigned long long) flength);
 
-  uint64_t* schedule = getwtschedule(inputstring);
 
-  for(int i = 0; i < 80; i++) {
-    printf("W(%2d): %016llx\n", i, (unsigned long long) schedule[i]);
-  }
+  for (int block = 0; block < nflength/128; block++) {
 
-  printf("  Initial abcdefgh: ");
-  for (int i = 0; i < 8; i++) {
-    printf("%016llx ", (unsigned long long) buffers[i]);
-  }
-  printf("\n");
-  for (int round = 0; round < 80; round++){
-    doRound(buffers, round, schedule[round]);
-    printf("After R%2d abcdefgh: ", round);
+    uint64_t* schedule = getwtschedule(&inputstring[block]);
+
+    for(int i = 0; i < 80; i++) {
+      printf("W(%2d): %016llx\n", i, (unsigned long long) schedule[i]);
+    }
+
+    printf("  Initial abcdefgh: ");
     for (int i = 0; i < 8; i++) {
       printf("%016llx ", (unsigned long long) buffers[i]);
     }
     printf("\n");
-  }
+    for (int round = 0; round < 80; round++){
+      doRound(buffers, round, schedule[round]);
+      printf("After R%2d abcdefgh: ", round);
+      for (int i = 0; i < 8; i++) {
+        printf("%016llx ", (unsigned long long) buffers[i]);
+      }
+      printf("\n");
+    }
 
-  printf("Final hash: ");
-  for (int i = 0; i < 8; i++) {
-    printf("%016llx",(unsigned long long) buffers[i] + inits[i]);
-  }
+    printf("Final hash: ");
+    for (int i = 0; i < 8; i++) {
+      printf("%016llx",(unsigned long long) buffers[i] + inits[i]);
+    }
 
-  printf("\n");
+    printf("\n");
+  }
   return 0;
 }
