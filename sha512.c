@@ -38,7 +38,7 @@ int main(int argc, char const *argv[]) {
 
 
   for (int block = 0; block < blockcount; block++) {
-    uint64_t* schedule = getwtschedule(&inputstring[block]);
+    uint64_t* schedule = getwtschedule(&inputstring[block*16]);
 
     for (int round = 0; round < 80; round++){
       doRound(buffers, round, schedule[round]);
@@ -103,7 +103,7 @@ uint64_t* getwtschedule(uint64_t *m) {
   for (int i = 0; i < 80; i++){
     if (i < 16) {
       schedule[i] = endianSwap64(m[i]);
-       printf("%d %016llx\n", i, (unsigned long long) schedule[i]);
+      printf("%d %016llx\n", i, (unsigned long long) schedule[i]);
       continue;
     }
     schedule[i] = schedule[i - 16] + 
