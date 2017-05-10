@@ -21,7 +21,7 @@ int main(int argc, char const *argv[]) {
   }
 
   nflength += flength + (128 - (flength%128)); //pad the buffer to 1024 bits
-  uint16_t blockcount = nflength/128 - 1;
+  uint16_t blockcount = nflength/128;
 
   rewind(input);
 
@@ -36,11 +36,13 @@ int main(int argc, char const *argv[]) {
   fclose(input);
 
   for (int block = 0; block < blockcount; block++) {
-    uint64_t* schedule = getwtschedule(&inputstring[block*16]);
+    uint64_t schedule[80];
+    getwtschedule(&inputstring[block*16], schedule);
 
     for (int round = 0; round < 80; round++){
       doRound(buffers, round, schedule[round]);
     }
+    // free(schedule);
 
     printf("Final hash: ");
     for (int i = 0; i < 8; i++) {
@@ -122,8 +124,7 @@ uint64_t endianSwap64(uint64_t in) {
   return (uint64_t) *((uint64_t*) input);
 }
 
-uint64_t* getwtschedule(uint64_t *m) {
-  uint64_t* schedule = (uint64_t*) malloc(79*sizeof(uint64_t));
+void getwtschedule(uint64_t *m, uint64_t *schedule) {
   for (int i = 0; i < 80; i++){
     if (i < 16) {
       schedule[i] = endianSwap64(m[i]);
@@ -137,7 +138,7 @@ uint64_t* getwtschedule(uint64_t *m) {
     // printf("%d %016llx\n", i, (unsigned long long) schedule[i]);
   }
 
-  return schedule;
+  // return schedule;
 }
 
 
