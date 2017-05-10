@@ -31,7 +31,7 @@ int main(int argc, char const *argv[]) {
   memset(inputstring, 0, nflength);
 
   ((char*) inputstring)[flength] = 0x80; //padding begins with a 1
-  ((uint64_t*) inputstring)[15] = endianSwap64(flength*8); //set the length of the input
+  ((uint64_t*) inputstring)[(nflength/sizeof(uint64_t)) -1] = endianSwap64(flength*8); //set the length of the input
 
   fread(inputstring, sizeof(uint64_t), flength, input);
   fclose(input);
@@ -46,7 +46,9 @@ int main(int argc, char const *argv[]) {
 
     printf("Final hash: ");
     for (int i = 0; i < 8; i++) {
-      printf("%016llx",(unsigned long long) buffers[i] + inits[i]);
+      buffers[i] += inits[i];
+      inits[i] = buffers[i];
+      printf("%016llx",(unsigned long long) buffers[i]);
     }
     printf("\n");
   }
@@ -59,6 +61,19 @@ uint64_t rotr(uint64_t input, uint8_t amnt) {
 }
 
 void doRound(uint64_t* input, uint8_t roundNumber, uint64_t word) {
+  if(roundNumber == 0) {
+    printf("Initial digest %llx %llx %llx %llx %llx %llx %llx %llx\n", 
+          (unsigned long long) input[0],
+          (unsigned long long) input[1],
+          (unsigned long long) input[2],
+          (unsigned long long) input[3],
+          (unsigned long long) input[4],
+          (unsigned long long) input[5],
+          (unsigned long long) input[6],
+          (unsigned long long) input[7]
+    );
+  }
+
   uint64_t maj = (input[0] & input[1]) ^ 
                  (input[0] & input[2]) ^ 
                  (input[1] & input[2]);
@@ -84,6 +99,17 @@ void doRound(uint64_t* input, uint8_t roundNumber, uint64_t word) {
   input[2] = input[1];
   input[1] = input[0];
   input[0] = suma + maj + haddthing;
+
+  printf("Round %d %016llx %016llx %016llx %016llx %016llx %016llx %016llx %016llx\n",
+    roundNumber, (unsigned long long) input[0],
+                 (unsigned long long) input[1],
+                 (unsigned long long) input[2],
+                 (unsigned long long) input[3],
+                 (unsigned long long) input[4],
+                 (unsigned long long) input[5],
+                 (unsigned long long) input[6],
+                 (unsigned long long) input[7]
+    );
 }
 
 uint64_t endianSwap64(uint64_t in) {
