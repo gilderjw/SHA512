@@ -20,9 +20,8 @@ int main(int argc, char const *argv[]) {
     nflength += 128;
   }
 
-  nflength += flength + (128 - flength %128); //pad the buffer to 1024 bits
-  uint16_t blockcount = nflength/128;
-
+  nflength += flength + (128 - (flength%128)); //pad the buffer to 1024 bits
+  uint16_t blockcount = nflength/128 - 1;
 
   rewind(input);
 
@@ -33,7 +32,7 @@ int main(int argc, char const *argv[]) {
   ((char*) inputstring)[flength] = 0x80; //padding begins with a 1
   ((uint64_t*) inputstring)[(nflength/sizeof(uint64_t)) -1] = endianSwap64(flength*8); //set the length of the input
 
-  fread(inputstring, sizeof(uint64_t), flength, input);
+  fread(inputstring, 1, flength, input);
   fclose(input);
 
   for (int block = 0; block < blockcount; block++) {
@@ -61,16 +60,16 @@ uint64_t rotr(uint64_t input, uint8_t amnt) {
 
 void doRound(uint64_t* input, uint8_t roundNumber, uint64_t word) {
   if(roundNumber == 0) {
-    printf("Initial digest %llx %llx %llx %llx %llx %llx %llx %llx\n", 
-          (unsigned long long) input[0],
-          (unsigned long long) input[1],
-          (unsigned long long) input[2],
-          (unsigned long long) input[3],
-          (unsigned long long) input[4],
-          (unsigned long long) input[5],
-          (unsigned long long) input[6],
-          (unsigned long long) input[7]
-    );
+    // printf("Initial digest %llx %llx %llx %llx %llx %llx %llx %llx\n", 
+    //       (unsigned long long) input[0],
+    //       (unsigned long long) input[1],
+    //       (unsigned long long) input[2],
+    //       (unsigned long long) input[3],
+    //       (unsigned long long) input[4],
+    //       (unsigned long long) input[5],
+    //       (unsigned long long) input[6],
+    //       (unsigned long long) input[7]
+    // );
   }
 
   uint64_t maj = (input[0] & input[1]) ^ 
@@ -99,16 +98,16 @@ void doRound(uint64_t* input, uint8_t roundNumber, uint64_t word) {
   input[1] = input[0];
   input[0] = suma + maj + haddthing;
 
-  printf("Round %d %016llx %016llx %016llx %016llx %016llx %016llx %016llx %016llx\n",
-    roundNumber, (unsigned long long) input[0],
-                 (unsigned long long) input[1],
-                 (unsigned long long) input[2],
-                 (unsigned long long) input[3],
-                 (unsigned long long) input[4],
-                 (unsigned long long) input[5],
-                 (unsigned long long) input[6],
-                 (unsigned long long) input[7]
-    );
+  // printf("Round %d %016llx %016llx %016llx %016llx %016llx %016llx %016llx %016llx\n",
+  //   roundNumber, (unsigned long long) input[0],
+  //                (unsigned long long) input[1],
+  //                (unsigned long long) input[2],
+  //                (unsigned long long) input[3],
+  //                (unsigned long long) input[4],
+  //                (unsigned long long) input[5],
+  //                (unsigned long long) input[6],
+  //                (unsigned long long) input[7]
+  //   );
 }
 
 uint64_t endianSwap64(uint64_t in) {
@@ -128,14 +127,14 @@ uint64_t* getwtschedule(uint64_t *m) {
   for (int i = 0; i < 80; i++){
     if (i < 16) {
       schedule[i] = endianSwap64(m[i]);
-      printf("%d %016llx\n", i, (unsigned long long) schedule[i]);
+      // printf("%d %016llx\n", i, (unsigned long long) schedule[i]);
       continue;
     }
     schedule[i] = schedule[i - 16] + 
                   (rotr(schedule[i-15], 1) ^ rotr(schedule[i-15], 8) ^ (schedule[i-15] >> 7)) +
                   schedule[i-7] +
                   (rotr(schedule[i-2], 19) ^ rotr(schedule[i-2], 61) ^ (schedule[i-2] >> 6));
-    printf("%d %016llx\n", i, (unsigned long long) schedule[i]);
+    // printf("%d %016llx\n", i, (unsigned long long) schedule[i]);
   }
 
   return schedule;
