@@ -4,17 +4,7 @@
 #include <string.h>
 #include <arpa/inet.h>
 
-uint64_t inits[] = {
-  0x6A09E667F3BCC908, 0xBB67AE8584CAA73B, 0x3C6EF372FE94F82B, 0xA54FF53A5F1D36F1,
-  0x510E527FADE682D1, 0x9B05688C2B3E6C1F, 0x1F83D9ABFB41BD6B, 0x5BE0CD19137E2179
-};
-
-uint64_t buffers[] = {
-  0x6A09E667F3BCC908, 0xBB67AE8584CAA73B, 0x3C6EF372FE94F82B, 0xA54FF53A5F1D36F1,
-  0x510E527FADE682D1, 0x9B05688C2B3E6C1F, 0x1F83D9ABFB41BD6B, 0x5BE0CD19137E2179
-};
-
-
+#define BYTES_IN_WORD 128
 
 uint64_t constants[] = {
   0x428A2F98D728AE22, 0x7137449123EF65CD, 0xB5C0FBCFEC4D3B2F, 0xE9B5DBA58189DBBC, 0x3956C25BF348B538,
@@ -39,3 +29,5 @@ uint64_t rotr(uint64_t input, uint8_t amnt);
 void doRound(uint64_t* input, uint8_t roundNumber, uint64_t word);
 uint64_t endianSwap64(uint64_t in);
 void getwtschedule(uint64_t *m, uint64_t *schedule);
+uint64_t* preprocess(FILE* input, uint16_t* blockcount);
+void calculateHash(uint16_t blockcount, uint64_t* inputstring, uint64_t* buffers);

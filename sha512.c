@@ -13,46 +13,74 @@ int main(int argc, char const *argv[]) {
     return -2;
   }
 
-  fseek(input, 0, SEEK_END);
-  uint16_t flength = ftell(input);
-  uint16_t nflength = 0;
-  if((flength%128) + 16 > 128){
-    nflength += 128;
+  uint16_t blockcount;
+  uint64_t* inputstring = preprocess(input, &blockcount);
+
+  uint64_t buffers[] = {
+    0x6A09E667F3BCC908, 0xBB67AE8584CAA73B, 0x3C6EF372FE94F82B, 0xA54FF53A5F1D36F1,
+    0x510E527FADE682D1, 0x9B05688C2B3E6C1F, 0x1F83D9ABFB41BD6B, 0x5BE0CD19137E2179
+  };
+
+  calculateHash(blockcount, inputstring, (uint64_t*) &buffers);
+
+  printf("Final hash: ");
+  for (int i = 0; i < 8; i++) {
+    printf("%016llx",(unsigned long long) buffers[i]);
   }
+  printf("\n");
+  return 0;
+}
 
-  nflength += flength + (128 - (flength%128)); //pad the buffer to 1024 bits
-  uint16_t blockcount = nflength/128;
-
-  rewind(input);
-
-  printf("%d bytes\n%d paddedbytes\n%d blocks\n", flength, nflength, blockcount);
-  uint64_t *inputstring = (uint64_t*) malloc(nflength);
-  memset(inputstring, 0, nflength);
-
-  ((char*) inputstring)[flength] = 0x80; //padding begins with a 1
-  ((uint64_t*) inputstring)[(nflength/sizeof(uint64_t)) -1] = endianSwap64(flength*8); //set the length of the input
-
-  fread(inputstring, 1, flength, input);
-  fclose(input);
+void calculateHash(uint16_t blockcount, uint64_t* inputstring, uint64_t* buffers) {
+  uint64_t inits[] = {
+    0x6A09E667F3BCC908, 0xBB67AE8584CAA73B, 0x3C6EF372FE94F82B, 0xA54FF53A5F1D36F1,
+    0x510E527FADE682D1, 0x9B05688C2B3E6C1F, 0x1F83D9ABFB41BD6B, 0x5BE0CD19137E2179
+  };
 
   for (int block = 0; block < blockcount; block++) {
-    uint64_t schedule[80];
+    uint64_t schedule[79];
     getwtschedule(&inputstring[block*16], schedule);
 
     for (int round = 0; round < 80; round++){
       doRound(buffers, round, schedule[round]);
     }
-    // free(schedule);
 
-    printf("Final hash: ");
     for (int i = 0; i < 8; i++) {
       buffers[i] += inits[i];
       inits[i] = buffers[i];
-      printf("%016llx",(unsigned long long) buffers[i]);
     }
-    printf("\n");
   }
-  return 0;
+}
+
+uint64_t* preprocess(FILE* input, uint16_t* blockcount) {
+  //read the input file
+  fseek(input, 0, SEEK_END);
+  uint16_t flength = ftell(input);
+  uint16_t nflength = 0;
+  if((flength % BYTES_IN_WORD) + 16 > BYTES_IN_WORD){
+    nflength += BYTES_IN_WORD;
+  }
+
+  //pad the buffer to 1024 bits
+  nflength += flength + (BYTES_IN_WORD - (flength % BYTES_IN_WORD)); 
+  *blockcount = nflength/BYTES_IN_WORD;
+
+  rewind(input);
+
+  printf("%d bytes\n%d paddedbytes\n%d blocks\n", flength, nflength, *blockcount);
+  uint64_t *inputstring = (uint64_t*) malloc(nflength);
+  memset(inputstring, 0, nflength);
+
+  //padding begins with a 1
+  ((char*) inputstring)[flength] = 0x80;
+
+  //set the length of the input
+  ((uint64_t*) inputstring)[(nflength/sizeof(uint64_t)) -1] = endianSwap64(flength*8); 
+
+  fread(inputstring, 1, flength, input);
+  fclose(input);
+
+  return inputstring;
 }
 
 uint64_t rotr(uint64_t input, uint8_t amnt) {
@@ -61,19 +89,6 @@ uint64_t rotr(uint64_t input, uint8_t amnt) {
 }
 
 void doRound(uint64_t* input, uint8_t roundNumber, uint64_t word) {
-  if(roundNumber == 0) {
-    // printf("Initial digest %llx %llx %llx %llx %llx %llx %llx %llx\n", 
-    //       (unsigned long long) input[0],
-    //       (unsigned long long) input[1],
-    //       (unsigned long long) input[2],
-    //       (unsigned long long) input[3],
-    //       (unsigned long long) input[4],
-    //       (unsigned long long) input[5],
-    //       (unsigned long long) input[6],
-    //       (unsigned long long) input[7]
-    // );
-  }
-
   uint64_t maj = (input[0] & input[1]) ^ 
                  (input[0] & input[2]) ^ 
                  (input[1] & input[2]);
@@ -99,17 +114,6 @@ void doRound(uint64_t* input, uint8_t roundNumber, uint64_t word) {
   input[2] = input[1];
   input[1] = input[0];
   input[0] = suma + maj + haddthing;
-
-  // printf("Round %d %016llx %016llx %016llx %016llx %016llx %016llx %016llx %016llx\n",
-  //   roundNumber, (unsigned long long) input[0],
-  //                (unsigned long long) input[1],
-  //                (unsigned long long) input[2],
-  //                (unsigned long long) input[3],
-  //                (unsigned long long) input[4],
-  //                (unsigned long long) input[5],
-  //                (unsigned long long) input[6],
-  //                (unsigned long long) input[7]
-  //   );
 }
 
 uint64_t endianSwap64(uint64_t in) {
@@ -125,20 +129,14 @@ uint64_t endianSwap64(uint64_t in) {
 }
 
 void getwtschedule(uint64_t *m, uint64_t *schedule) {
-  for (int i = 0; i < 80; i++){
+  for (int i = 0; i < 80; i++) {
     if (i < 16) {
       schedule[i] = endianSwap64(m[i]);
-      // printf("%d %016llx\n", i, (unsigned long long) schedule[i]);
       continue;
     }
     schedule[i] = schedule[i - 16] + 
                   (rotr(schedule[i-15], 1) ^ rotr(schedule[i-15], 8) ^ (schedule[i-15] >> 7)) +
                   schedule[i-7] +
                   (rotr(schedule[i-2], 19) ^ rotr(schedule[i-2], 61) ^ (schedule[i-2] >> 6));
-    // printf("%d %016llx\n", i, (unsigned long long) schedule[i]);
   }
-
-  // return schedule;
 }
-
-
