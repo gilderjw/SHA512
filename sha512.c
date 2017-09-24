@@ -38,7 +38,7 @@ void calculateHash(uint16_t blockcount, uint64_t* inputstring, uint64_t* buffers
   };
 
   for (int block = 0; block < blockcount; block++) {
-    uint64_t schedule[79];
+    uint64_t schedule[80];
     getwtschedule(&inputstring[block*16], schedule);
 
     for (int round = 0; round < 80; round++){
